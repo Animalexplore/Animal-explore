@@ -1,6 +1,6 @@
 // Configure these two public values after creating your Supabase project.
-const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
-const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+const SUPABASE_URL = "https://mdxcsasjsfkczwmrvpeg.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ZtRwiRgJ-ieBl_C0bl_k7w_MUlx0Fy3";
 const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.includes("PASTE_");
 const db = configured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
