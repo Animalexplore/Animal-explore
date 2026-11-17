@@ -1,8 +1,8 @@
-// Configure these two public values after creating your Supabase project.
+// Supabase public project settings
 const SUPABASE_URL = "https://mdxcsasjsfkczwmrvpeg.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_ZtRwiRgJ-ieBl_C0bl_k7w_MUlx0Fy3";
 const configured = SUPABASE_URL.startsWith("https://") && !SUPABASE_ANON_KEY.includes("PASTE_");
-const db = configured ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const db = configured && window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const packages = [
   {key:"1k",coins:1000,price:3000},{key:"2k",coins:2000,price:6000},
@@ -18,20 +18,21 @@ let chosen = null;
 packages.forEach(p=>{
   const el=document.createElement("article");
   el.className="package"+(p.special?" special":"");
-  el.innerHTML=`<div class="coin-art">🪙</div><h3>${p.special?"بسته ویژه":"بسته "+p.key.toUpperCase()} سکه</h3><div class="price">${toman(p.price)}</div><button class="gold-btn" type="button">خرید این بسته</button>`;
+  const packageName = p.special ? "۵۰٬۰۰۰ سکه ویژه" : "بسته "+p.key.toUpperCase()+" سکه";
+  el.innerHTML=`<div class="coin-art">🪙</div><h3>${packageName}</h3><div class="price">${toman(p.price)}</div><button class="gold-btn" type="button">خرید این بسته</button>`;
   el.querySelector("button").addEventListener("click",()=>openOrder(p));
   grid.appendChild(el);
 });
 function openOrder(p){
   chosen=p;
   document.getElementById("order-title").textContent=`خرید ${p.coins.toLocaleString("fa-IR")} سکه`;
-  document.getElementById("selected-package").textContent=`${p.coins.toLocaleString("fa-IR")} سکه · ${toman(p.price)}`;
+  document.getElementById("selected-package").textContent=`${p.coins.toLocaleString("fa-IR")}${p.special?" سکه ویژه":" سکه"} · ${toman(p.price)}`;
   document.getElementById("order-result").textContent="";
   document.getElementById("order-dialog").showModal();
 }
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>document.getElementById(b.dataset.close).close()));
 function show(el,msg,ok=false){el.innerHTML=msg;el.className="result "+(ok?"success":"error");}
-function requireDb(el){if(!db){show(el,"اتصال دیتابیس هنوز تنظیم نشده است. ابتدا مراحل فایل راهنما و SQL را انجام بده.");return false;}return true;}
+function requireDb(el){if(!db){show(el,"اتصال دیتابیس برقرار نشد. اتصال اینترنت و بارگذاری صفحه را بررسی کن.");return false;}return true;}
 
 document.getElementById("order-form").addEventListener("submit",async e=>{
   e.preventDefault(); const out=document.getElementById("order-result"); if(!requireDb(out)||!chosen)return;

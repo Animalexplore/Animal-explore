@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090909">
   <title>TOMAS COIN SHOP | فروش ویژه سکه</title>
-  <link rel="icon" href="assets/coin-mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -24,7 +23,6 @@
         <p>بسته موردنظرت رو انتخاب کن، رسید پرداخت رو بفرست و با کد رهگیری سفارشت رو دنبال کن.</p>
         <a class="gold-btn" href="#packages">مشاهده بسته‌ها <span>←</span></a>
       </div>
-      <div class="hero-art"><img src="assets/tomas-shop-hero.png" alt="طرح اختصاصی فروشگاه تاماس"></div>
     </section>
 
     <section class="section-head" id="packages">
@@ -72,9 +70,9 @@
       <button type="button" class="close" data-close="order-dialog">×</button>
       <span class="eyebrow">ثبت سفارش جدید</span><h2 id="order-title">خرید بسته سکه</h2>
       <div class="selected-package" id="selected-package"></div>
-      <label>آیدی یا نام کاربری بازی<input id="game-id" required maxlength="100" placeholder="آیدی بازی را وارد کن"></label>
+      <label>آیدی بازی<input id="game-id" required maxlength="100" placeholder="آیدی بازی را وارد کن"></label>
       <label>نام خریدار<input id="buyer-name" required maxlength="80" placeholder="نام شما"></label>
-      <label>راه ارتباطی (تلگرام یا شماره)<input id="buyer-contact" required maxlength="100" placeholder="@username یا شماره تماس"></label>
+      <label>آیدی تلگرام<input id="buyer-contact" required maxlength="100" placeholder="@username" dir="ltr"></label>
       <div class="payment-box"><b>اطلاعات کارت‌به‌کارت</b><strong dir="ltr">6219 8619 5843 3814</strong><span>به نام: سید ابوالفضل طبسی</span><small>پس از واریز، تصویر رسید را بارگذاری کن.</small></div>
       <label>تصویر رسید پرداخت<input id="receipt-file" type="file" accept="image/*" required></label>
       <label class="check"><input id="terms" type="checkbox" required> اطلاعات سفارش و مبلغ را بررسی کردم.</label>
@@ -99,6 +97,6 @@
     </div>
   </dialog>
 
-  <script src="app.js?v=20261117"></script>
+  <script src="app.js?v=20261118"></script>
 </body>
 </html>
