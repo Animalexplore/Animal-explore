@@ -1,42 +1,24 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Animal Explore | انیمال اکسپلور</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <script defer src="app.js"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090b10"><title>Animal Explore</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 </head>
 <body>
-<header><div class="brand"><span class="paw">🐾</span><div><b>ANIMAL EXPLORE</b><small>دنیای بازیکنان Animal Rush</small></div></div><span class="pill">نسخه آزمایشی</span></header>
-<main>
-<section class="hero"><h1>به دنیای Animal Explore خوش اومدی 💜</h1><p>با بازیکنان Animal Rush آشنا شو، پست بگذار و گروه و کانال بساز.</p></section>
-<section class="panel" id="authPanel">
-  <h2>ورود یا ساخت حساب</h2>
-  <p class="muted">برای ساخت حساب، اطلاعات زیر را وارد کن. شناسه بازی در این نسخه به‌صورت دستی دریافت می‌شود و از سرور بازی استعلام نمی‌شود.</p>
-  <div class="grid">
-    <label>نام<input id="name" placeholder="نام نمایشی"></label>
-    <label>سن<input id="age" type="number" min="1" max="120" placeholder="سن"></label>
-    <label>تاریخ تولد<input id="birth" type="date"></label>
-    <label>شناسه بازی<input id="gameId" placeholder="شناسه Animal Rush"></label>
-    <label>آیدی روبیکا<input id="rubika" placeholder="آیدی روبیکا"></label>
-    <label>کد معرف (اختیاری)<input id="referral" placeholder="کد معرف"></label>
-    <label class="wide">رمز عبور<input id="password" type="password" minlength="6" placeholder="حداقل ۶ نویسه"></label>
-  </div>
-  <div class="actions"><button id="signup">ساخت حساب</button><button class="secondary" id="login">ورود</button></div>
-  <p id="authMsg" class="msg" aria-live="polite"></p>
-</section>
-<section class="panel hidden" id="appPanel">
-  <div class="row"><h2 id="welcome">خوش اومدی!</h2><button class="secondary" id="logout">خروج</button></div>
-  <div class="profile" id="profileInfo"></div>
-  <h3>ایجاد پست</h3><textarea id="postText" maxlength="2000" placeholder="چه خبر؟"></textarea><button id="publish">انتشار پست</button>
-  <h3>آخرین پست‌ها</h3><div id="feed" class="feed"></div>
-  <div class="grid two">
-    <div><h3>ساخت گروه</h3><input id="groupName" placeholder="نام گروه"><button id="createGroup">ساخت گروه</button><div id="groups"></div></div>
-    <div><h3>ساخت کانال</h3><input id="channelName" placeholder="نام کانال"><button id="createChannel">ساخت کانال</button><div id="channels"></div></div>
-  </div>
-</section>
-<footer>Animal Explore · ساخته‌شده برای بازیکنان Animal Rush</footer>
-</main>
+<div class="app">
+<header class="top"><div class="brand"><span class="paw">🐾</span><div><b>Animal Explore</b><small>دنیای ارتباطات حیوانی</small></div></div><button id="newPost" class="primary">＋ پست جدید</button></header>
+<main id="view" class="view"></main>
+<nav class="nav">
+<button data-page="explore" class="active"><i>⌕</i><span>اکسپلور</span></button>
+<button data-page="following"><i>♡</i><span>دنبال‌شده‌ها</span></button>
+<button data-page="chat"><i>▤</i><span>چت</span></button>
+<button data-page="wallet"><i>◈</i><span>کیف پول</span></button>
+<button data-page="profile"><i>◉</i><span>پروفایل</span></button>
+</nav>
+</div>
+<div id="modal" class="modal hidden"><div class="modal-card"><button class="close" id="closeModal">×</button><div id="modalBody"></div></div></div>
+<script src="app.js"></script>
 </body></html>

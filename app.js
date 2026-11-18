@@ -1,63 +1,21 @@
-(() => {
-  const $ = id => document.getElementById(id);
-  const ready = window.SUPABASE_URL && !window.SUPABASE_URL.includes("YOUR-PROJECT") &&
-    window.SUPABASE_ANON_KEY && !window.SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
-  const client = ready && window.supabase ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY) : null;
-  let currentProfile = null;
-  const msg = (s, type="") => { $("authMsg").textContent=s; $("authMsg").className="msg "+type; };
-  const syntheticEmail = id => `${String(id).trim().toLowerCase()}@accounts.animal-explore.invalid`;
-  const needClient = () => { if(!client){msg("ابتدا آدرس و کلید عمومی Supabase را در config.js وارد کن.","error");return false;} return true; };
-  async function loadApp(){
-    const {data:{user}} = await client.auth.getUser();
-    if(!user){$("appPanel").classList.add("hidden");$("authPanel").classList.remove("hidden");return;}
-    const {data,error}=await client.from("profiles").select("*").eq("id",user.id).single();
-    if(error){msg("خطا در دریافت پروفایل: "+error.message,"error");return;}
-    currentProfile=data;
-    $("authPanel").classList.add("hidden");$("appPanel").classList.remove("hidden");
-    $("welcome").textContent=`سلام ${data.display_name} 🐾`;
-    $("profileInfo").textContent=`شناسه بازی: ${data.game_id} | نقش: ${data.role}${data.is_verified?" | تیک آبی ✓":""}`;
-    await Promise.all([loadFeed(),loadEntities("groups"),loadEntities("channels")]);
-  }
-  $("signup").onclick=async()=>{
-    if(!needClient())return;
-    const display_name=$("name").value.trim(), game_id=$("gameId").value.trim(), password=$("password").value;
-    const age=Number($("age").value), birth_date=$("birth").value, rubika_id=$("rubika").value.trim(), referral=$("referral").value.trim();
-    if(!display_name||!game_id||!password||!age||!birth_date||!rubika_id){msg("همه موارد به‌جز کد معرف را کامل کن.","error");return;}
-    if(password.length<6){msg("رمز عبور باید حداقل ۶ نویسه باشد.","error");return;}
-    const {data,error}=await client.auth.signUp({email:syntheticEmail(game_id),password});
-    if(error){msg(error.message,"error");return;}
-    if(!data.user){msg("حساب ایجاد نشد. تنظیمات تأیید ایمیل Supabase را بررسی کن.","error");return;}
-    const {error:profileError}=await client.from("profiles").insert({id:data.user.id,display_name,age,birth_date,game_id,rubika_id,referral_code_used:referral||null});
-    if(profileError){msg("حساب ساخته شد اما ذخیره پروفایل خطا داد: "+profileError.message,"error");return;}
-    msg("حساب ساخته شد!","success"); await loadApp();
-  };
-  $("login").onclick=async()=>{
-    if(!needClient())return;
-    const id=$("gameId").value.trim(), password=$("password").value;
-    if(!id||!password){msg("شناسه بازی و رمز را وارد کن.","error");return;}
-    const {error}=await client.auth.signInWithPassword({email:syntheticEmail(id),password});
-    if(error){msg(error.message,"error");return;} await loadApp();
-  };
-  $("logout").onclick=async()=>{await client.auth.signOut();currentProfile=null;await loadApp();};
-  async function loadFeed(){
-    const {data,error}=await client.from("posts").select("id,content,created_at,profiles(display_name)").order("created_at",{ascending:false}).limit(30);
-    $("feed").innerHTML="";
-    if(error){$("feed").textContent=error.message;return;}
-    (data||[]).forEach(p=>{const d=document.createElement("article");d.className="post";const b=document.createElement("b");b.textContent=p.profiles?.display_name||"بازیکن";const t=document.createElement("p");t.textContent=p.content;d.append(b,t);$("feed").append(d);});
-  }
-  $("publish").onclick=async()=>{const content=$("postText").value.trim();if(!content)return;const {error}=await client.from("posts").insert({user_id:currentProfile.id,content});if(error){alert(error.message);return;}$("postText").value="";await loadFeed();};
-  async function loadEntities(kind){
-    const {data,error}=await client.from(kind).select("id,name,created_at").order("created_at",{ascending:false}).limit(20);
-    const target=$(kind);target.innerHTML="";
-    if(error){target.textContent=error.message;return;}
-    (data||[]).forEach(x=>{const d=document.createElement("div");d.className="entity";d.textContent=x.name;target.append(d);});
-  }
-  async function createEntity(kind,inputId){
-    const name=$(inputId).value.trim();if(!name)return;
-    const {error}=await client.from(kind).insert({name,created_by:currentProfile.id});
-    if(error){alert(error.message);return;}$(inputId).value="";await loadEntities(kind);
-  }
-  $("createGroup").onclick=()=>createEntity("groups","groupName");
-  $("createChannel").onclick=()=>createEntity("channels","channelName");
-  if(client) loadApp(); else msg("برای فعال‌سازی، اطلاعات Supabase را در config.js قرار بده.");
-})();
+const $=s=>document.querySelector(s), view=$("#view"), modal=$("#modal"), modalBody=$("#modalBody");
+let page="explore", chatTab="private", profile={name:"کاربر انیمال",username:"animal_user",age:"",birth:"",bio:"هنوز بیوگرافی ثبت نشده.",game_id:"",avatar:"🐾"};
+let posts=[{name:"تیم انیمال",username:"animal_team",text:"به Animal Explore خوش آمدید! اینجا می‌توانید پست بگذارید، دوستان تازه پیدا کنید و در گروه‌ها عضو شوید. 🐾",likes:12}];
+const hasConfig=window.SUPABASE_URL&&window.SUPABASE_ANON_KEY&&!window.SUPABASE_ANON_KEY.includes("PASTE_");
+let db=hasConfig&&window.supabase?window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY):null;
+function showModal(html){modalBody.innerHTML=html;modal.classList.remove("hidden")}
+function closeModal(){modal.classList.add("hidden")}
+$("#closeModal").onclick=closeModal;modal.addEventListener("click",e=>{if(e.target===modal)closeModal()});
+function setPage(p){page=p;document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===p));render()}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>setPage(b.dataset.page));
+function postCard(p){return `<article class="card post"><div class="row"><div class="avatar">🐾</div><div><b>${esc(p.name)}</b><div class="muted">@${esc(p.username)}</div></div></div><p>${esc(p.text)}</p><div class="actions"><span>♡ ${p.likes||0}</span><span>◯ نظر</span><span>↗ اشتراک</span><span>▱ ذخیره</span></div></article>`}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function render(){
+if(page==="explore"||page==="following"){view.innerHTML=`<div class="section-title">${page==="explore"?"اکسپلور ✨":"پست‌های دنبال‌شده‌ها ♡"}</div><input id="search" placeholder="جست‌وجوی کاربران، گروه‌ها و پست‌ها...">${posts.map(postCard).join("")||'<div class="empty">هنوز پستی وجود ندارد.</div>'}`;return}
+if(page==="chat"){view.innerHTML=`<div class="section-title">پیام‌ها</div><div class="tabs"><button class="tab ${chatTab==="private"?"active":""}" data-tab="private">گفت‌وگوها</button><button class="tab ${chatTab==="groups"?"active":""}" data-tab="groups">گروه‌ها</button><button class="tab ${chatTab==="channels"?"active":""}" data-tab="channels">کانال‌ها</button></div><div class="card"><div class="muted">${chatTab==="private"?"گفت‌وگوی خصوصی":"فضای "+(chatTab==="groups"?"گروه‌ها":"کانال‌ها")}</div><p>برای استفاده واقعی از پیام‌رسان، اتصال پایگاه داده و ورود کاربران لازم است.</p><button class="primary" id="createRoom">＋ ساخت ${chatTab==="groups"?"گروه":chatTab==="channels"?"کانال":"گفت‌وگو"}</button></div><div class="empty">هنوز موردی برای نمایش نیست.</div>`;document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{chatTab=b.dataset.tab;render()});$("#createRoom").onclick=()=>showModal(`<h3>ساخت ${chatTab==="groups"?"گروه":chatTab==="channels"?"کانال":"گفت‌وگو"}</h3><label>نام</label><input placeholder="نام را وارد کنید"><label>آیدی یکتا</label><input placeholder="@your_id"><button class="primary" onclick="alert('برای ذخیره‌سازی واقعی، جداول دیتابیس باید نصب شوند.')">ایجاد</button>`);return}
+if(page==="wallet"){view.innerHTML=`<div class="section-title">کیف پول ◈</div><div class="card"><div class="muted">موجودی سکه</div><div class="balance">۰ <small>سکه</small></div><p class="muted">تاریخچه تراکنش‌ها و شارژ کیف پول</p></div><div class="card"><b>تراکنش‌ها</b><div class="empty">هنوز تراکنشی ثبت نشده است.</div></div>`;return}
+if(page==="profile"){view.innerHTML=`<div class="card profile-head"><div class="avatar">${esc(profile.avatar)}</div><h2>${esc(profile.name)}</h2><div class="muted">@${esc(profile.username)}</div><p>${esc(profile.bio)}</p><div class="row" style="justify-content:center"><span class="pill">سن: ${esc(profile.age||"ثبت نشده")}</span><span class="pill">شناسه: ${esc(profile.game_id||"ثبت نشده")}</span></div><button class="primary" id="editProfile">ویرایش پروفایل</button></div><div class="card"><div class="settings-item" id="settings"><b>⚙️ تنظیمات</b><div class="muted">حریم خصوصی، حساب کاربری و ظاهر برنامه</div></div><div class="settings-item"><b>پست‌ها</b><div class="muted">${posts.length} پست</div></div></div>`;$("#editProfile").onclick=editProfile;$("#settings").onclick=()=>showModal(`<h3>تنظیمات</h3><div class="settings-item">🌙 ظاهر برنامه: تیره</div><div class="settings-item">🔒 حریم خصوصی</div><div class="settings-item">👤 اطلاعات حساب</div><div class="settings-item">ℹ️ درباره Animal Explore</div>`);return}
+}
+function editProfile(){showModal(`<h3>ویرایش پروفایل</h3><label>نام نمایشی</label><input id="pname" value="${esc(profile.name)}"><label>آیدی اختصاصی</label><input id="puser" value="${esc(profile.username)}"><label>سن</label><input id="page" type="number" min="1" max="120" value="${esc(profile.age)}"><label>تاریخ تولد</label><input id="pbirth" type="date" value="${esc(profile.birth)}"><label>شناسه بازی / آیدی بازی</label><input id="pgame" value="${esc(profile.game_id)}"><label>بیوگرافی</label><textarea id="pbio">${esc(profile.bio)}</textarea><label>ایموجی عکس پروفایل</label><input id="pavatar" maxlength="4" value="${esc(profile.avatar)}"><button class="primary" id="saveProfile">ذخیره تغییرات</button>`);$("#saveProfile").onclick=async()=>{profile={name:$("#pname").value.trim()||"کاربر",username:$("#puser").value.trim().replace(/^@/,"")||"animal_user",age:$("#page").value,birth:$("#pbirth").value,game_id:$("#pgame").value,bio:$("#pbio").value,avatar:$("#pavatar").value||"🐾"};closeModal();render();if(db){const {data:{user}}=await db.auth.getUser();if(user){await db.from("profiles").upsert({id:user.id,display_name:profile.name,username:profile.username,age:profile.age?Number(profile.age):null,birth_date:profile.birth||null,game_id:profile.game_id,bio:profile.bio});}}}}
+$("#newPost").onclick=()=>showModal(`<h3>ایجاد پست</h3><textarea id="postText" placeholder="چی توی ذهنت داری؟"></textarea><button class="primary" id="publish">انتشار پست</button>`);modal.addEventListener("click",e=>{if(e.target.id==="publish"){let t=$("#postText").value.trim();if(t){posts.unshift({name:profile.name,username:profile.username,text:t,likes:0});closeModal();setPage("explore")}}});
+render();
