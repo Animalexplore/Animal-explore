@@ -1,111 +1,72 @@
-
 (() => {
-  const $ = s => document.querySelector(s);
-  const view = $('#view');
-  const panel = $('#authPanel');
-
-  const toast = message => {
-    const t = $('#toast');
-    if (t) {
-      t.textContent = message;
-      t.style.display = 'block';
-    } else {
-      alert(message);
-    }
-  };
-
-  const ready = window.supabase &&
-    window.SUPABASE_URL &&
-    window.SUPABASE_ANON_KEY;
-
-  if (!ready) {
-    toast('اتصال دیتابیس برقرار نیست. config.js را بررسی کن.');
-    return;
-  }
-
-  const db = window.supabase.createClient(
-    window.SUPABASE_URL,
-    window.SUPABASE_ANON_KEY
-  );
-
-  $('#authBtn')?.addEventListener('click', async () => {
-    const { data } = await db.auth.getSession();
-
-    if (data.session) {
-      await db.auth.signOut();
-      location.reload();
-    } else {
-      panel?.classList.toggle('hidden');
-    }
-  });
-
-  $('#signup')?.addEventListener('click', async () => {
-    try {
-      const email = $('#email').value.trim();
-      const password = $('#password').value;
-      const displayName = $('#displayName').value.trim();
-
-      if (!email || !password)
-        throw new Error('ایمیل و رمز عبور را وارد کن.');
-
-      if (password.length < 6)
-        throw new Error('رمز باید حداقل ۶ کاراکتر باشد.');
-
-      const { data, error } = await db.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { display_name: displayName }
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.session) {
-        toast('ثبت‌نام موفق بود!');
-        location.reload();
-      } else {
-        toast('ثبت‌نام انجام شد؛ ایمیلت را برای تأیید بررسی کن.');
-      }
-    } catch (e) {
-      toast(e.message);
-    }
-  });
-
-  $('#login')?.addEventListener('click', async () => {
-    try {
-      const email = $('#email').value.trim();
-      const password = $('#password').value;
-
-      if (!email || !password)
-        throw new Error('ایمیل و رمز عبور را وارد کن.');
-
-      const { error } = await db.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) throw error;
-
-      toast('ورود موفق بود!');
-      location.reload();
-    } catch (e) {
-      toast(e.message);
-    }
-  });
-
-  db.auth.getSession().then(({ data }) => {
-    if (data.session) {
-      $('#authBtn').textContent = 'خروج';
-      view.innerHTML =
-        '<div class="welcome"><h1>خوش آمدی 🐾</h1><p>وارد حساب شدی.</p></div>';
-    } else {
-      view.innerHTML =
-        '<div class="welcome"><h1>به Animal Explore خوش آمدی 🐾</h1><p>دنیای مجازی انیمال راش</p><button class="primary" id="openAuth">ورود و شروع</button></div>';
-
-      $('#openAuth')?.addEventListener('click', () => {
-        panel?.classList.remove('hidden');
-      });
-    }
-  });
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const ready=!!(window.supabase&&window.SUPABASE_URL&&window.SUPABASE_ANON_KEY);
+const db=ready?window.supabase.createClient(window.SUPABASE_URL,window.SUPABASE_ANON_KEY):null;
+let user=null, profile=null, page='explore', chatMode='private', currentRoom=null;
+const view=$('#view'), modal=$('#modal'), modalBody=$('#modalBody');
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2600)};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const openModal=html=>{modalBody.innerHTML=html;modal.classList.remove('hidden')};
+$('#closeModal').onclick=()=>modal.classList.add('hidden');
+$('#authBtn').onclick=()=>$('#authPanel').classList.toggle('hidden');
+async function refreshUser(){if(!db)return;const {data:{session}}=await db.auth.getSession();user=session?.user||null;if(user){await ensureProfile();$('#authBtn').textContent='خروج';$('#authBtn').onclick=async()=>{await db.auth.signOut();user=null;profile=null;location.reload()}}else{$('#authBtn').textContent='ورود / ثبت‌نام';$('#authBtn').onclick=()=>$('#authPanel').classList.toggle('hidden')}}
+async function ensureProfile(){let {data,error}=await db.from('profiles').select('*').eq('id',user.id).maybeSingle();if(error)console.warn(error);if(!data){const m=user.user_metadata||{};const row={id:user.id,display_name:m.display_name||'کاربر',username:m.username||('u_'+user.id.slice(0,8)),age:m.age?Number(m.age):null,game_id:m.game_id||'',bio:m.bio||'',avatar_url:m.avatar_url||null};const r=await db.from('profiles').insert(row).select().single();if(r.error)console.warn(r.error);data=r.data}profile=data}
+const cleanUsername=v=>String(v||'').trim().replace(/^@/,'').toLowerCase().replace(/[^a-z0-9_]/g,'');
+const internalEmail=u=>`${u}@users.animalexplore.invalid`;
+function setAuthMode(mode){const signup=mode==='signup';$('#loginFields').classList.toggle('hidden',signup);$('#signupFields').classList.toggle('hidden',!signup);$('#showLogin').classList.toggle('active',!signup);$('#showSignup').classList.toggle('active',signup)}
+$('#showLogin').onclick=()=>setAuthMode('login');$('#showSignup').onclick=()=>setAuthMode('signup');
+$('#login').onclick=async()=>{if(!db)return toast('تنظیمات Supabase در config.js درست نیست');const username=cleanUsername($('#loginUsername').value),password=$('#loginPassword').value;if(!username||!password)return toast('آیدی و رمز عبور را وارد کن');let {error}=await db.auth.signInWithPassword({email:internalEmail(username),password});if(error)return toast('آیدی یا رمز عبور اشتباه است');await refreshUser();$('#authPanel').classList.add('hidden');render()};
+$('#signup').onclick=async()=>{if(!db)return toast('تنظیمات Supabase درست نیست');const display_name=$('#displayName').value.trim(),username=cleanUsername($('#signupUsername').value),age=Number($('#signupAge').value),game_id=$('#signupGameId').value.trim(),bio=$('#signupBio').value.trim(),password=$('#signupPassword').value,file=$('#signupAvatar').files[0];if(display_name.length<2)return toast('نام نمایشی را وارد کن');if(!/^[a-z0-9_]{3,24}$/.test(username))return toast('آیدی باید ۳ تا ۲۴ حرف انگلیسی، عدد یا _ باشد');if(!Number.isInteger(age)||age<1||age>120)return toast('سن معتبر وارد کن');if(!game_id)return toast('شناسه انیمال راش را وارد کن');if(password.length<6)return toast('رمز عبور باید حداقل ۶ کاراکتر باشد');if(file&&file.size>5*1024*1024)return toast('حجم عکس باید کمتر از ۵ مگابایت باشد');
+const {data,error}=await db.auth.signUp({email:internalEmail(username),password,options:{data:{display_name,username,age,game_id,bio}}});if(error){if(/already registered|already been registered/i.test(error.message))return toast('این آیدی قبلاً ثبت شده است');return toast(error.message)}
+if(data.session){await refreshUser();if(file){try{const avatar_url=await upload('avatars',file);const r=await db.from('profiles').update({avatar_url}).eq('id',user.id);if(r.error)throw r.error}catch(e){toast('حساب ساخته شد، اما عکس آپلود نشد: '+e.message)}}await ensureProfile();$('#authPanel').classList.add('hidden');toast('حساب ساخته شد؛ خوش اومدی!');render()}else{toast('حساب ساخته شد؛ برای ورود، تأیید ایمیل باید در Supabase خاموش باشد. عکس پروفایل را بعد از ورود از پروفایل اضافه کن.');setAuthMode('login');$('#loginUsername').value=username;$('#loginPassword').value=password}}
+function requireUser(){if(!user){$('#authPanel').classList.remove('hidden');toast('اول وارد حساب شو');return false}return true}
+function showFile(url,type){if(!url)return '';return type?.startsWith('video')?`<video class="post-media" controls src="${esc(url)}"></video>`:`<img class="post-media" src="${esc(url)}" alt="رسانه پست">`}
+async function upload(bucket,file){if(!file) return null;const path=`${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;const {error}=await db.storage.from(bucket).upload(path,file,{upsert:false});if(error)throw error;const {data}=db.storage.from(bucket).getPublicUrl(path);return data.publicUrl}
+async function render(){if(!db){view.innerHTML='<div class="panel">اتصال Supabase تنظیم نشده است. فایل config.js را بررسی کن.</div>';return}if(!user){view.innerHTML='<div class="welcome"><h1>Animal Explore 🐾</h1><p>دنیای مجازی انیمال راش</p><button class="primary" id="welcomeAuth">ورود و شروع</button></div>';$('#welcomeAuth').onclick=()=>$('#authPanel').classList.remove('hidden');return}
+if(page==='explore'||page==='following')return renderFeed();
+if(page==='profile')return renderProfile();
+if(page==='wallet')return renderWallet();
+if(page==='chat')return renderChat();
+}
+async function renderFeed(){view.innerHTML=`<div class="row between"><h2>${page==='explore'?'اکسپلور':'دنبال‌شده‌ها'}</h2><button class="primary" id="newPost">＋ پست جدید</button></div><div id="feed"><p class="muted">در حال دریافت پست‌ها...</p></div>`;
+$('#newPost').onclick=createPost;
+let followingIds=[];
+if(page==='following'){
+ const {data:rels,error:relError}=await db.from('follows').select('following_id').eq('follower_id',user.id);
+ if(relError){$('#feed').innerHTML=`<p class="hint">خطا در دریافت دنبال‌شده‌ها: ${esc(relError.message)}</p>`;return}
+ followingIds=(rels||[]).map(x=>x.following_id);
+ if(!followingIds.length){$('#feed').innerHTML='<div class="panel">هنوز کسی را دنبال نکرده‌ای. از اکسپلور کاربران را دنبال کن.</div>';return}
+}
+let q=db.from('posts').select('*,profiles(display_name,username,avatar_url,is_verified)').order('created_at',{ascending:false}).limit(40);
+if(page==='following')q=q.in('user_id',followingIds);
+const {data,error}=await q;if(error){$('#feed').innerHTML=`<p class="hint">خطا در دریافت پست‌ها: ${esc(error.message)}</p>`;return}
+if(!data?.length){$('#feed').innerHTML='<div class="panel">هنوز پستی وجود ندارد. اولین پست را منتشر کن!</div>';return}
+for(const p of data){let {count}=await db.from('likes').select('*',{count:'exact',head:true}).eq('post_id',p.id);let liked=(await db.from('likes').select('id').eq('post_id',p.id).eq('user_id',user.id).maybeSingle()).data;
+let following=(await db.from('follows').select('following_id').eq('follower_id',user.id).eq('following_id',p.user_id).maybeSingle()).data;
+let {data:comments}=await db.from('comments').select('*,profiles(display_name)').eq('post_id',p.id).order('created_at').limit(3);
+const el=document.createElement('article');el.className='post';el.innerHTML=`<div class="post-head"><img class="avatar" src="${esc(p.profiles?.avatar_url||'')}" onerror="this.style.display='none'"><div><b>${esc(p.profiles?.display_name||'کاربر')}</b> ${p.profiles?.is_verified?'<span class="verified">✓</span>':''}<div class="muted">@${esc(p.profiles?.username||'')}</div></div></div><p>${esc(p.content||'')}</p>${showFile(p.media_url,p.media_type)}<div class="actions"><button data-like>${liked?'♥':'♡'} ${count||0}</button>${p.user_id!==user.id?`<button data-follow>${following?'دنبال‌نکردن':'＋ دنبال‌کردن'}</button>`:''}<button data-comment>💬 دیدگاه</button><button data-share>↗ اشتراک</button></div><div class="comments">${(comments||[]).map(c=>`<div class="comment"><b>${esc(c.profiles?.display_name||'کاربر')}:</b> ${esc(c.content)}</div>`).join('')}</div>`;
+el.querySelector('[data-like]').onclick=async()=>{if(liked){await db.from('likes').delete().eq('id',liked.id)}else{await db.from('likes').insert({post_id:p.id,user_id:user.id})}renderFeed()};
+const followBtn=el.querySelector('[data-follow]');
+if(followBtn)followBtn.onclick=async()=>{const result=following?await db.from('follows').delete().eq('follower_id',user.id).eq('following_id',p.user_id):await db.from('follows').insert({follower_id:user.id,following_id:p.user_id});if(result.error)return toast(result.error.message);renderFeed()};
+el.querySelector('[data-comment]').onclick=()=>{openModal(`<h3>دیدگاه</h3><textarea id="commentText" placeholder="دیدگاهت..."></textarea><button class="primary full" id="sendComment">ارسال</button>`);$('#sendComment').onclick=async()=>{let content=$('#commentText').value.trim();if(!content)return;let {error}=await db.from('comments').insert({post_id:p.id,user_id:user.id,content});if(error)return toast(error.message);modal.classList.add('hidden');renderFeed()}};
+el.querySelector('[data-share]').onclick=()=>{let url=location.href.split('#')[0]+'#post-'+p.id;navigator.clipboard?.writeText(url);toast('پیوند پست کپی شد')};
+$('#feed').append(el)}
+}
+function createPost(){openModal(`<h3>پست جدید</h3><textarea id="postText" placeholder="چی تو ذهنته؟"></textarea><label class="hint">عکس، ویدیو یا فایل</label><input id="postFile" type="file" accept="image/*,video/*"><button class="primary full" id="publish">انتشار پست</button>`);$('#publish').onclick=async()=>{try{let file=$('#postFile').files[0],url=file?await upload('post-media',file):null;let {error}=await db.from('posts').insert({user_id:user.id,content:$('#postText').value.trim(),media_url:url,media_type:file?.type||null});if(error)throw error;modal.classList.add('hidden');toast('پست منتشر شد');renderFeed()}catch(e){toast(e.message)}}}
+async function renderProfile(){let {data:p}=await db.from('profiles').select('*').eq('id',user.id).single();profile=p||profile;view.innerHTML=`<h2>پروفایل من</h2><div class="panel"><div class="profile-top"><img class="profile-pic" src="${esc(profile?.avatar_url||'')}" onerror="this.style.display='none'"><div><h3>${esc(profile?.display_name||'کاربر')} ${profile?.is_verified?'<span class="verified">✓</span>':''}</h3><div class="muted">@${esc(profile?.username||'')}</div><span class="badge">${profile?.role==='founder'?'بنیان‌گذار':profile?.role==='admin'?'مدیر':'عضو'}</span></div></div><p>${esc(profile?.bio||'هنوز بیوگرافی ننوشتی.')}</p><div class="muted">سن: ${esc(profile?.age||'ثبت نشده')} · شناسه: ${esc(profile?.game_id||'—')}</div><button class="secondary full" id="editProfile">ویرایش پروفایل</button></div>${['admin','founder'].includes(profile?.role)?'<button class="primary full" id="adminPanel">پنل مدیریت</button>':''}`;
+$('#editProfile').onclick=()=>openModal(`<h3>ویرایش پروفایل</h3><input id="pname" placeholder="نام" value="${esc(profile?.display_name)}"><input id="puser" placeholder="آیدی انگلیسی" value="${esc(profile?.username)}"><input id="page" type="number" placeholder="سن" value="${esc(profile?.age||'')}"><input id="pgame" placeholder="شناسه انیمال راش" value="${esc(profile?.game_id||'')}"><textarea id="pbio" placeholder="بیوگرافی">${esc(profile?.bio||'')}</textarea><label class="hint">تصویر پروفایل از گالری</label><input id="pavatar" type="file" accept="image/*"><button class="primary full" id="saveProfile">ذخیره</button>`);
+setTimeout(()=>$('#saveProfile').onclick=async()=>{try{let f=$('#pavatar').files[0],avatar_url=f?await upload('avatars',f):profile.avatar_url;let updates={display_name:$('#pname').value,username:$('#puser').value.toLowerCase().replace(/[^a-z0-9_]/g,''),age:Number($('#page').value)||null,game_id:$('#pgame').value.trim(),bio:$('#pbio').value,avatar_url};let {error}=await db.from('profiles').update(updates).eq('id',user.id);if(error)throw error;await ensureProfile();modal.classList.add('hidden');renderProfile();toast('پروفایل ذخیره شد')}catch(e){toast(e.message)}},0);
+if($('#adminPanel'))$('#adminPanel').onclick=renderAdmin}
+async function renderWallet(){let {data:w,error}=await db.from('wallets').select('*').eq('user_id',user.id).maybeSingle();if(error){view.innerHTML=`<div class="panel">کیف پول آماده نیست: ${esc(error.message)}<p class="hint">ابتدا SQL همراه فایل را اجرا کن.</p></div>`;return}if(!w){let r=await db.rpc('ensure_wallet');if(r.error){view.innerHTML=`<div class="panel">${esc(r.error.message)}</div>`;return}return renderWallet()}
+let {data:tx}=await db.from('wallet_transfers').select('*').or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).order('created_at',{ascending:false}).limit(15);
+view.innerHTML=`<h2>کیف پول</h2><div class="panel"><div class="muted">موجودی من</div><h1>${Number(w.balance).toLocaleString('fa-IR')} سکه</h1><div class="muted">کد کیف پول: <b>${esc(w.wallet_code)}</b></div><button class="secondary" id="copyWallet">کپی کد</button></div><div class="panel"><h3>انتقال سکه</h3><input id="receiverCode" placeholder="کد کیف پول مقصد"><input id="coinAmount" type="number" min="1" placeholder="مقدار سکه"><button class="primary full" id="transfer">ارسال سکه</button><p class="hint">انتقال به‌صورت امن و اتمی در دیتابیس انجام می‌شود.</p></div><div class="panel"><h3>تراکنش‌های اخیر</h3>${(tx||[]).map(t=>`<div class="list-item">${t.sender_id===user.id?'ارسال':'دریافت'} · ${Number(t.amount).toLocaleString('fa-IR')} سکه <small class="muted">${new Date(t.created_at).toLocaleDateString('fa-IR')}</small></div>`).join('')||'<p class="muted">تراکنشی نیست.</p>'}</div>`;
+$('#copyWallet').onclick=()=>navigator.clipboard?.writeText(w.wallet_code).then(()=>toast('کپی شد'));
+$('#transfer').onclick=async()=>{let amount=Number($('#coinAmount').value),code=$('#receiverCode').value.trim();if(!Number.isSafeInteger(amount)||amount<1)return toast('مقدار سکه معتبر نیست');let {error}=await db.rpc('transfer_coins',{p_wallet_code:code,p_amount:amount});if(error)return toast(error.message);toast('انتقال انجام شد');renderWallet()}}
+async function renderChat(){view.innerHTML=`<h2>پیام‌رسان</h2><div class="tabs"><button data-mode="private" class="${chatMode==='private'?'active':''}">گفت‌وگوی خصوصی</button><button data-mode="group" class="${chatMode==='group'?'active':''}">گروه‌ها</button><button data-mode="channel" class="${chatMode==='channel'?'active':''}">کانال‌ها</button></div><div id="chatArea" class="panel"><p class="muted">برای شروع، آیدی کاربر یا اتاق را وارد کن.</p><input id="targetId" placeholder="${chatMode==='private'?'آیدی کاربر': 'نام گروه یا کانال'}"><button class="primary full" id="startRoom">${chatMode==='private'?'بازکردن چت':'ساخت '+(chatMode==='group'?'گروه':'کانال')}</button><div id="roomMessages"></div></div>`;
+$$('[data-mode]').forEach(b=>b.onclick=()=>{chatMode=b.dataset.mode;renderChat()});
+$('#startRoom').onclick=async()=>{if(chatMode==='private'){let target=$('#targetId').value.trim();let {data:p,error}=await db.from('profiles').select('id,username,display_name').eq('username',target).maybeSingle();if(error||!p)return toast('کاربر پیدا نشد');let {data:room,error:e}=await db.rpc('get_or_create_direct_room',{p_other_user:p.id});if(e)return toast(e.message);currentRoom=room;loadMessages()}else{let name=$('#targetId').value.trim();if(!name)return toast('نام را وارد کن');let {data:r,error}=await db.from('rooms').insert({name,room_type:chatMode,created_by:user.id}).select().single();if(error)return toast(error.message);await db.from('room_members').insert({room_id:r.id,user_id:user.id,member_role:'owner'});currentRoom=r.id;loadMessages()}};
+async function loadMessages(){let area=$('#roomMessages');area.innerHTML='<p class="muted">پیام‌ها</p><div id="msgs"></div><textarea id="msgText" placeholder="پیام..."></textarea><input id="msgFile" type="file" accept="image/*,video/*"><button class="primary full" id="sendMsg">ارسال</button>';let {data}=await db.from('messages').select('*,profiles(display_name)').eq('room_id',currentRoom).order('created_at').limit(80);$('#msgs').innerHTML=(data||[]).map(m=>`<div class="comment"><b>${esc(m.profiles?.display_name||'کاربر')}:</b> ${esc(m.content||'')}${m.media_url?`<a href="${esc(m.media_url)}" target="_blank"> فایل پیوست</a>`:''}</div>`).join('');$('#sendMsg').onclick=async()=>{try{let f=$('#msgFile').files[0],url=f?await upload('chat-media',f):null;let {error}=await db.from('messages').insert({room_id:currentRoom,sender_id:user.id,content:$('#msgText').value,media_url:url});if(error)throw error;loadMessages()}catch(e){toast(e.message)}}}}
+async function renderAdmin(){if(!['admin','founder'].includes(profile?.role))return toast('دسترسی مدیر لازم است');let {data:users}=await db.from('profiles').select('id,display_name,username,is_verified,role').order('created_at',{ascending:false}).limit(100);view.innerHTML=`<h2>پنل مدیریت</h2><div class="panel"><h3>مدیریت تیک تأیید</h3>${(users||[]).map(p=>`<div class="list-item row between"><div><b>${esc(p.display_name)}</b><div class="muted">@${esc(p.username)} · ${esc(p.role)}</div></div><button class="secondary" data-user="${p.id}" data-verified="${p.is_verified}">${p.is_verified?'برداشتن تیک':'دادن تیک'}</button></div>`).join('')}</div><p class="hint">تغییرات فقط از طریق تابع امن مدیریتی انجام می‌شود.</p>`;$$('[data-user]').forEach(b=>b.onclick=async()=>{let {error}=await db.rpc('admin_set_verified',{p_user_id:b.dataset.user,p_verified:b.dataset.verified!=='true'});if(error)return toast(error.message);renderAdmin()})}
+$$('.nav button').forEach(b=>b.onclick=()=>{page=b.dataset.page;$$('.nav button').forEach(x=>x.classList.toggle('active',x===b));render()});
+(async()=>{if(!ready){view.innerHTML='<div class="panel">config.js را بررسی کن.</div>';return}await refreshUser();render()})();
 })();
