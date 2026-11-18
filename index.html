@@ -1,39 +1,94 @@
 <!doctype html>
 <html lang="fa" dir="rtl">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080b12"><title>Animal Explore</title>
-<script src="chat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#080b12">
+  <title>Animal Explore</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="chat.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="chat.js"></script>
 </head>
 <body>
+
 <div class="shell">
-<header class="top"><div class="brand"><div class="logo">🐾</div><div><b>Animal Explore</b><small>دنیای مجازی انیمال راش</small></div></div><button id="authBtn" class="ghost">ورود / ثبت‌نام</button></header>
-<div id="authPanel" class="panel auth hidden">
-<h2>ورود به Animal Explore</h2>
-<div class="tabs"><button type="button" id="showLogin" class="active">ورود</button><button type="button" id="showSignup">ثبت‌نام</button></div>
-<div id="loginFields"><input id="loginUsername" autocomplete="username" placeholder="آیدی کاربری مثل parham"><input id="loginPassword" type="password" autocomplete="current-password" placeholder="رمز عبور"><button id="login" class="primary full">ورود</button></div>
-<div id="signupFields" class="hidden">
-<input id="displayName" maxlength="50" placeholder="نام نمایشی">
-<input id="signupUsername" maxlength="24" autocomplete="username" placeholder="آیدی کاربری مثل parham (بدون @)">
-<input id="signupAge" type="number" min="1" max="120" placeholder="سن">
-<input id="signupGameId" maxlength="60" placeholder="شناسه انیمال راش">
-<textarea id="signupBio" maxlength="160" placeholder="بیوگرافی کوتاه"></textarea>
-<input id="signupPassword" type="password" minlength="6" autocomplete="new-password" placeholder="رمز عبور دلخواه (حداقل ۶ کاراکتر)">
-<label class="hint" for="signupAvatar">عکس پروفایل (اختیاری)</label><input id="signupAvatar" type="file" accept="image/*">
-<button id="signup" class="primary full">ساخت حساب</button>
-</div><p class="hint">برای ثبت‌نام ایمیل لازم نیست؛ با آیدی و رمز وارد می‌شوی.</p></div>
-<main id="view" class="view"><div class="welcome"><h1>به Animal Explore خوش آمدی 🐾</h1><p>برای شروع وارد حساب شو یا ثبت‌نام کن.</p></div></main>
-<nav class="nav">
-<button data-page="explore" class="active"><i>⌕</i><span>اکسپلور</span></button>
-<button data-page="following"><i>♡</i><span>دنبال‌شده‌ها</span></button>
-<button data-page="chat"><i>▤</i><span>چت</span></button>
-<button data-page="wallet"><i>◈</i><span>کیف پول</span></button>
-<button data-page="profile"><i>◉</i><span>پروفایل</span></button>
-</nav>
+
+  <header class="top">
+    <div class="brand">
+      <div class="logo">🐾</div>
+      <div>
+        <b>Animal Explore</b>
+        <small>دنیای مجازی انیمال راش</small>
+      </div>
+    </div>
+    <button id="authBtn" class="ghost">ورود / ثبت‌نام</button>
+  </header>
+
+  <div id="authPanel" class="panel auth hidden">
+    <h2>ورود به Animal Explore</h2>
+
+    <div class="tabs">
+      <button type="button" id="showLogin" class="active">ورود</button>
+      <button type="button" id="showSignup">ثبت‌نام</button>
+    </div>
+
+    <div id="loginFields">
+      <input id="loginUsername" placeholder="آیدی کاربری">
+      <input id="loginPassword" type="password" placeholder="رمز عبور">
+      <button id="login" class="primary full">ورود</button>
+    </div>
+
+    <div id="signupFields" class="hidden">
+      <input id="displayName" placeholder="نام نمایشی">
+      <input id="signupUsername" placeholder="آیدی کاربری">
+      <input id="signupAge" type="number" placeholder="سن">
+      <input id="signupGameId" placeholder="شناسه انیمال راش">
+      <textarea id="signupBio" placeholder="بیوگرافی"></textarea>
+      <input id="signupPassword" type="password" placeholder="رمز عبور">
+      <label class="hint">عکس پروفایل</label>
+      <input id="signupAvatar" type="file" accept="image/*">
+      <button id="signup" class="primary full">ساخت حساب</button>
+    </div>
+  </div>
+
+  <main id="view" class="view">
+    <div class="welcome">
+      <h1>به Animal Explore خوش آمدی 🐾</h1>
+      <p>دنیای مجازی انیمال راش</p>
+    </div>
+  </main>
+
+  <nav class="nav">
+    <button data-page="explore" class="active">
+      <i>⌕</i><span>اکسپلور</span>
+    </button>
+    <button data-page="following">
+      <i>♡</i><span>دنبال‌شده‌ها</span>
+    </button>
+    <button data-page="chat">
+      <i>▤</i><span>چت</span>
+    </button>
+    <button data-page="wallet">
+      <i>◈</i><span>کیف پول</span>
+    </button>
+    <button data-page="profile">
+      <i>◉</i><span>پروفایل</span>
+    </button>
+  </nav>
+
 </div>
-<div id="modal" class="modal hidden"><div class="modal-card"><button class="close" id="closeModal">×</button><div id="modalBody"></div></div></div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <button class="close" id="closeModal">×</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
+
 <script src="app.js"></script>
-</body></html>
+</body>
+</html>
